@@ -1,0 +1,498 @@
+{
+  "info": {
+    "name": "OSDS Appointment API",
+    "description": "Complete API collection for OSDS Appointment System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5200/api",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Cookies are automatically stored by Postman",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Login successful\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "login"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "logout"]
+            }
+          }
+        },
+        {
+          "name": "Request Temporary Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/request-temporary-account",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "request-temporary-account"]
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"currentPassword\": \"oldpassword123\",\n  \"newPassword\": \"newpassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "change-password"]
+            }
+          }
+        },
+        {
+          "name": "Register User (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"fullName\": \"John Doe\",\n  \"contactNumber\": \"09123456789\",\n  \"positionTitle\": \"Teacher\",\n  \"unitId\": 1,\n  \"role\": \"user\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "register"]
+            }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"John Updated\",\n  \"contactNumber\": \"09987654321\",\n  \"positionTitle\": \"Senior Teacher\",\n  \"unitId\": 2,\n  \"role\": \"user\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/updateUser/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "updateUser", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reset Password (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/reset-password/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "reset-password", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Units",
+      "item": [
+        {
+          "name": "Get All Units",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/units/getAllUnits?isActive=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["units", "getAllUnits"],
+              "query": [
+                {
+                  "key": "isActive",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Unit By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/units/getUnitById/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["units", "getUnitById", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Unit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Curriculum and Instruction\",\n  \"description\": \"Handles curriculum development and instruction\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/units/createUnit",
+              "host": ["{{baseUrl}}"],
+              "path": ["units", "createUnit"]
+            }
+          }
+        },
+        {
+          "name": "Update Unit",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Unit Name\",\n  \"description\": \"Updated description\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/units/updateUnit/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["units", "updateUnit", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Unit (Soft Delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/units/deleteUnit/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["units", "deleteUnit", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Unit Permanent",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/units/deleteUnitPermanent/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["units", "deleteUnitPermanent", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Appointments",
+      "item": [
+        {
+          "name": "Get All Appointments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/getAllAppointments?status=pending&date=2025-11-30",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", "getAllAppointments"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending"
+                },
+                {
+                  "key": "date",
+                  "value": "2025-11-30"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Appointment By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/getAppointmentById/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", "getAppointmentById", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Appointment (Unauthenticated)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Jane Smith\",\n  \"unitId\": 1,\n  \"appointmentDate\": \"2025-11-30T00:00:00.000Z\",\n  \"appointmentStartTime\": \"2025-11-30T08:00:00.000Z\",\n  \"appointmentEndTime\": \"2025-11-30T12:00:00.000Z\",\n  \"appointmentStatus\": \"pending\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/appointments/createAppointment",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", "createAppointment"]
+            }
+          }
+        },
+        {
+          "name": "Create Appointment (Authenticated - Auto userId)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Make sure to login first to get the cookie",
+                  "// This request will automatically use userId from the cookie"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"John Doe\",\n  \"unitId\": 1,\n  \"appointmentDate\": \"2025-11-30T00:00:00.000Z\",\n  \"appointmentStartTime\": \"2025-11-30T13:00:00.000Z\",\n  \"appointmentEndTime\": \"2025-11-30T17:00:00.000Z\",\n  \"appointmentStatus\": \"pending\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/appointments/createAppointment",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", "createAppointment"]
+            }
+          }
+        },
+        {
+          "name": "Create Appointment (Admin - Booking for User)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Jane Smith\",\n  \"userId\": 5,\n  \"unitId\": 1,\n  \"appointmentDate\": \"2025-12-01T00:00:00.000Z\",\n  \"appointmentStartTime\": \"2025-12-01T08:00:00.000Z\",\n  \"appointmentEndTime\": \"2025-12-01T12:00:00.000Z\",\n  \"appointmentStatus\": \"pending\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/appointments/createAppointment",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", "createAppointment"]
+            }
+          }
+        },
+        {
+          "name": "Update Appointment",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"appointmentStatus\": \"approved\",\n  \"appointmentDate\": \"2025-12-01T00:00:00.000Z\",\n  \"appointmentStartTime\": \"2025-12-01T09:00:00.000Z\",\n  \"appointmentEndTime\": \"2025-12-01T13:00:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/appointments/updateAppointment/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", "updateAppointment", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Appointment (Soft Delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/deleteAppointment/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", "deleteAppointment", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Appointment Permanent",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/deleteAppointmentPermanent/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", "deleteAppointmentPermanent", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+

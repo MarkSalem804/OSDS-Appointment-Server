@@ -1,0 +1,46 @@
+{
+  "name": "osds-appointment-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MarkSalem804/OSDS-Appointment-Server.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/MarkSalem804/OSDS-Appointment-Server/issues"
+  },
+  "homepage": "https://github.com/MarkSalem804/OSDS-Appointment-Server#readme",
+  "devDependencies": {
+    "nodemon": "^3.1.10",
+    "prisma": "^6.18.0"
+  },
+  "dependencies": {
+    "@google-ai/generativelanguage": "^3.5.0",
+    "@prisma/client": "^6.18.0",
+    "bcryptjs": "^3.0.2",
+    "clear": "^0.1.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "fs": "^0.0.1-security",
+    "google-auth-library": "^10.5.0",
+    "http": "^0.0.1-security",
+    "https": "^1.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "nodemailer": "^7.0.10",
+    "path": "^0.12.7"
+  }
+}
