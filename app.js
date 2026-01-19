@@ -45,17 +45,17 @@ app.use(errorHandler);
 // app.set("io", io);
 
 // HTTPS Configuration for Production (commented out for development)
-/*
+
 const options = {
-  key: fs.readFileSync("/etc/letsencrypt/live/your-domain.com/privkey.pem"),
-  cert: fs.readFileSync("/etc/letsencrypt/live/your-domain.com/fullchain.pem"),
+  key: fs.readFileSync("/etc/letsencrypt/live/osdsappointment.depedimuscity.com/privkey.pem"),
+  cert: fs.readFileSync("/etc/letsencrypt/live/osdsappointment.depedimuscity.com/fullchain.pem"),
 };
 
 // Create HTTPS server for production
 const httpsServer = https.createServer(options, app);
 const httpsIO = new Server(httpsServer, {
   cors: {
-    origin: process.env.CLIENT_URL || "https://your-domain.com",
+    origin: process.env.CLIENT_URL || "https://osdsappointment.depedimuscity.com",
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true,
   },
@@ -85,18 +85,18 @@ app.set("httpsIO", httpsIO);
 // Production HTTPS Server
 httpsServer.listen(443, () => {
   clear(); // Clear the terminal when the server starts
-  console.log(`🚀 HTTPS Server running on port 443`);
+  console.log(`🚀 HTTPS Server running on port 5200`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || "production"}`);
-  console.log(`📡 HTTPS API Base URL: https://your-domain.com`);
+  console.log(`📡 HTTPS API Base URL: https://osdsappointment.depedimuscity.com`);
   console.log(`🔌 HTTPS Socket.io server ready for connections`);
 });
-*/
+
 
 // Development HTTP Server
-server.listen(port, () => {
-  clear(); // Clear the terminal when the server starts
-  console.log(`🚀 Server running on port ${port}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log(`📡 API Base URL: http://localhost:${port}`);
-  console.log(`🔌 Socket.io server ready for connections`);
-});
+// server.listen(port, () => {
+//   clear(); // Clear the terminal when the server starts
+//   console.log(`🚀 Server running on port ${port}`);
+//   console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
+//   console.log(`📡 API Base URL: http://localhost:${port}`);
+//   console.log(`🔌 Socket.io server ready for connections`);
+// });

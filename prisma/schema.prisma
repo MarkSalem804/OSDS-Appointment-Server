@@ -51,6 +51,7 @@ model appointment {
   unitId               Int
   unit                 unit?     @relation(fields: [unitId], references: [id])
   fullName             String?
+  email                String?
   agenda               String?   @db.Text
   appointmentDate      DateTime?
   appointmentStartTime DateTime?

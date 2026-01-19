@@ -180,6 +180,7 @@ async function createAppointment(appointmentData) {
         userId: appointmentData.userId || null,
         unitId: appointmentData.unitId,
         fullName: appointmentData.fullName || null,
+        email: appointmentData.email || null,
         agenda: appointmentData.agenda || null,
         appointmentDate: appointmentData.appointmentDate,
         appointmentStartTime: appointmentData.appointmentStartTime,
@@ -240,6 +241,9 @@ async function updateAppointment(id, appointmentData) {
     }
     if (appointmentData.fullName !== undefined) {
       updateData.fullName = appointmentData.fullName || null;
+    }
+    if (appointmentData.email !== undefined) {
+      updateData.email = appointmentData.email || null;
     }
     if (appointmentData.agenda !== undefined) {
       updateData.agenda = appointmentData.agenda || null;

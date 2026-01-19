@@ -92,6 +92,7 @@ appointmentRouter.post("/createAppointment", optionalAuth, async (req, res) => {
   try {
     const {
       userId,
+      email,
       fullName,
       unitId,
       appointmentDate,
@@ -103,88 +104,73 @@ appointmentRouter.post("/createAppointment", optionalAuth, async (req, res) => {
     } = req.body;
 
     // Validate required fields
+    if (!email) {
+      return res.status(400).json({ success: false, error: "DepEd email is required" });
+    }
     if (!fullName || !fullName.trim()) {
-      return res.status(400).json({
-        success: false,
-        error: "Full name is required",
-      });
+      return res.status(400).json({ success: false, error: "Full name is required" });
     }
-
     if (!unitId) {
-      return res.status(400).json({
-        success: false,
-        error: "Unit ID is required",
-      });
+      return res.status(400).json({ success: false, error: "Unit ID is required" });
     }
-
     if (!appointmentDate) {
-      return res.status(400).json({
-        success: false,
-        error: "Appointment date is required",
-      });
+      return res.status(400).json({ success: false, error: "Appointment date is required" });
     }
-
     if (!appointmentStartTime) {
-      return res.status(400).json({
-        success: false,
-        error: "Appointment start time is required",
-      });
+      return res.status(400).json({ success: false, error: "Appointment start time is required" });
     }
-
     if (!appointmentEndTime) {
-      return res.status(400).json({
-        success: false,
-        error: "Appointment end time is required",
-      });
+      return res.status(400).json({ success: false, error: "Appointment end time is required" });
     }
 
-    // Parse dates
-    // Handle date-only strings (YYYY-MM-DD) to avoid timezone shifts
+    // Force appointmentDate to local midnight
     let parsedAppointmentDate;
-    if (
-      typeof appointmentDate === "string" &&
-      appointmentDate.match(/^\d{4}-\d{2}-\d{2}$/)
-    ) {
+    if (typeof appointmentDate === "string" && appointmentDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
       const [year, month, day] = appointmentDate.split("-").map(Number);
-      parsedAppointmentDate = new Date(year, month - 1, day, 0, 0, 0, 0); // Local midnight
+      parsedAppointmentDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0)); // local midnight
     } else {
-      parsedAppointmentDate = new Date(appointmentDate);
+      const tempDate = new Date(appointmentDate);
+      parsedAppointmentDate = new Date(tempDate.getFullYear(), tempDate.getMonth(), tempDate.getDate(), 0, 0, 0, 0);
     }
+
     const parsedStartTime = new Date(appointmentStartTime);
     const parsedEndTime = new Date(appointmentEndTime);
 
-    // Validate parsed dates
+    // Validation for date correctness
     if (isNaN(parsedAppointmentDate.getTime())) {
-      return res.status(400).json({
-        success: false,
-        error: "Invalid appointment date format",
-      });
+      return res.status(400).json({ success: false, error: "Invalid appointment date format" });
     }
-
     if (isNaN(parsedStartTime.getTime())) {
-      return res.status(400).json({
-        success: false,
-        error: "Invalid appointment start time format",
-      });
+      return res.status(400).json({ success: false, error: "Invalid appointment start time format" });
     }
-
     if (isNaN(parsedEndTime.getTime())) {
-      return res.status(400).json({
-        success: false,
-        error: "Invalid appointment end time format",
-      });
+      return res.status(400).json({ success: false, error: "Invalid appointment end time format" });
     }
 
-    // If user is authenticated, use their userId (unless explicitly overridden)
-    // This allows admins to book for others by providing userId in body
+
     const finalUserId = userId
       ? parseInt(userId)
       : req.user
       ? req.user.id
       : null;
 
+  
+      console.log("📥 Received appointment data (route):", {
+        userId: finalUserId,
+        email,
+        fullName,
+        unitId,
+        appointmentDate: parsedAppointmentDate.toISOString(),
+        appointmentStartTime: parsedStartTime.toISOString(),
+        appointmentEndTime: parsedEndTime.toISOString(),
+        appointmentStatus,
+        createdBy,
+        agenda,
+      });
+
     const appointment = await appointmentServices.createAppointment({
       userId: finalUserId,
+      email,
       fullName: fullName.trim(),
       unitId: parseInt(unitId),
       appointmentDate: parsedAppointmentDate,
@@ -203,28 +189,13 @@ appointmentRouter.post("/createAppointment", optionalAuth, async (req, res) => {
       data: appointment,
     });
   } catch (error) {
-    console.error(
-      "❌ [Appointments] Failed to create appointment:",
-      error.message
-    );
-
-    // Determine appropriate status code based on error message
+    console.error("❌ [Appointments] Failed to create appointment:", error.message);
     let statusCode = 500;
-    if (error.message.includes("required")) {
-      statusCode = 400;
-    } else if (
-      error.message.includes("conflict") ||
-      error.message.includes("Time slot")
-    ) {
-      statusCode = 409; // Conflict
-    } else if (
-      error.message.includes("deadline") ||
-      error.message.includes("2:00 PM")
-    ) {
-      statusCode = 400; // Bad request for deadline violations
-    } else if (error.message.includes("weekday")) {
-      statusCode = 400;
-    }
+
+    if (error.message.includes("required")) statusCode = 400;
+    else if (error.message.includes("conflict") || error.message.includes("Time slot")) statusCode = 409;
+    else if (error.message.includes("deadline") || error.message.includes("2:00 PM")) statusCode = 400;
+    else if (error.message.includes("weekday")) statusCode = 400;
 
     res.status(statusCode).json({
       success: false,
@@ -232,6 +203,9 @@ appointmentRouter.post("/createAppointment", optionalAuth, async (req, res) => {
     });
   }
 });
+
+
+
 
 // Update appointment
 appointmentRouter.put("/updateAppointment/:id", async (req, res) => {
@@ -253,21 +227,21 @@ appointmentRouter.put("/updateAppointment/:id", async (req, res) => {
       unitId,
       userId,
       fullName,
+      email,
       agenda,
     } = req.body;
 
     const updateData = {};
 
-    // Parse and validate dates if provided
+    // Parse and normalize appointmentDate to UTC midnight if provided
     if (appointmentDate) {
       let parsedDate;
-      // Handle date-only strings (YYYY-MM-DD) to avoid timezone shifts
       if (
         typeof appointmentDate === "string" &&
         appointmentDate.match(/^\d{4}-\d{2}-\d{2}$/)
       ) {
         const [year, month, day] = appointmentDate.split("-").map(Number);
-        parsedDate = new Date(year, month - 1, day, 0, 0, 0, 0); // Local midnight
+        parsedDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0)); // UTC midnight
       } else {
         parsedDate = new Date(appointmentDate);
       }
@@ -314,6 +288,10 @@ appointmentRouter.put("/updateAppointment/:id", async (req, res) => {
       updateData.userId = userId ? parseInt(userId) : null;
     }
 
+    if (email !== undefined) {
+      updateData.email = email || null;
+    }
+
     if (fullName !== undefined) {
       updateData.fullName = fullName.trim() || null;
     }
@@ -340,25 +318,20 @@ appointmentRouter.put("/updateAppointment/:id", async (req, res) => {
       error.message
     );
 
-    // Determine appropriate status code based on error message
     let statusCode = 500;
-    if (error.message.includes("not found")) {
-      statusCode = 404;
-    } else if (error.message.includes("required")) {
-      statusCode = 400;
-    } else if (
+    if (error.message.includes("not found")) statusCode = 404;
+    else if (error.message.includes("required")) statusCode = 400;
+    else if (
       error.message.includes("conflict") ||
       error.message.includes("Time slot")
-    ) {
-      statusCode = 409; // Conflict
-    } else if (
+    )
+      statusCode = 409;
+    else if (
       error.message.includes("deadline") ||
       error.message.includes("2:00 PM")
-    ) {
+    )
       statusCode = 400;
-    } else if (error.message.includes("weekday")) {
-      statusCode = 400;
-    }
+    else if (error.message.includes("weekday")) statusCode = 400;
 
     res.status(statusCode).json({
       success: false,
@@ -366,6 +339,7 @@ appointmentRouter.put("/updateAppointment/:id", async (req, res) => {
     });
   }
 });
+
 
 // Delete appointment (soft delete)
 appointmentRouter.delete("/deleteAppointment/:id", async (req, res) => {

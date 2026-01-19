@@ -1,4 +1,5 @@
 const appointmentDataModule = require("../database/appointment-data");
+const sendEmail = require("../middlewares/sendEmail");
 
 /**
  * Check if a date is a weekday (Monday-Friday)
@@ -113,9 +114,14 @@ async function getAppointmentById(id) {
  */
 async function createAppointment(appointmentData) {
   try {
-    // Validate required fields
+    console.log("📥 Received appointment data (service):", appointmentData);
+
+    // Validate required fields again (safety net)
     if (!appointmentData.fullName || !appointmentData.fullName.trim()) {
       throw new Error("Full name is required");
+    }
+    if (!appointmentData.email) {
+      throw new Error("DepEd email is required");
     }
     if (!appointmentData.unitId) {
       throw new Error("Unit ID is required");
@@ -130,96 +136,55 @@ async function createAppointment(appointmentData) {
       throw new Error("Appointment end time is required");
     }
 
-    // Parse dates
     const appointmentDate = new Date(appointmentData.appointmentDate);
     const startTime = new Date(appointmentData.appointmentStartTime);
     const endTime = new Date(appointmentData.appointmentEndTime);
-    const requestTime = new Date(); // Current time when request is made
+    const requestTime = new Date();
 
-    // Validate that start time is before end time
+    console.log("⏳ Parsed Dates:", {
+      appointmentDate,
+      startTime,
+      endTime,
+      requestTime,
+    });
+
     if (startTime >= endTime) {
       throw new Error("Start time must be before end time");
     }
 
-    // Validate that start and end times are on the same date as appointment date
-    const appointmentDateOnly = new Date(appointmentDate);
-    appointmentDateOnly.setHours(0, 0, 0, 0);
-    const startDateOnly = new Date(startTime);
-    startDateOnly.setHours(0, 0, 0, 0);
-    const endDateOnly = new Date(endTime);
-    endDateOnly.setHours(0, 0, 0, 0);
-
-    if (
-      startDateOnly.getTime() !== appointmentDateOnly.getTime() ||
-      endDateOnly.getTime() !== appointmentDateOnly.getTime()
-    ) {
-      throw new Error(
-        "Start time and end time must be on the same date as the appointment date"
-      );
+    // Helper function to get UTC date only (midnight UTC)
+    function getUTCDateOnly(date) {
+      return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
     }
 
-    // Validate deadline (2:00 PM on weekdays)
-    validateDeadline(appointmentDate, requestTime);
+    const appointmentDateUTC = getUTCDateOnly(appointmentDate);
+    const startDateUTC = getUTCDateOnly(startTime);
+    const endDateUTC = getUTCDateOnly(endTime);
 
-    // Check if appointment overlaps with lunch break (12:00 PM - 1:00 PM)
-    if (overlapsLunchBreak(startTime, endTime)) {
-      throw new Error(
-        "Appointments cannot be scheduled during lunch break (12:00 PM - 1:00 PM). Please choose a different time."
-      );
+    console.log("📅 UTC Dates for Validation:", {
+      appointmentDateUTC,
+      startDateUTC,
+      endDateUTC,
+    });
+
+    if (startDateUTC !== appointmentDateUTC || endDateUTC !== appointmentDateUTC) {
+      throw new Error("Start time and end time must be on the same date as the appointment date");
     }
 
-    // Check if the day is marked as busy
-    const busyDayDataModule = require("../database/busy-day-data");
-    const isBusy = await busyDayDataModule.isDayBusy(appointmentDate);
-    if (isBusy) {
-      throw new Error(
-        "This day is marked as busy. Appointments cannot be scheduled on this date."
-      );
-    }
+    // You can uncomment and add your other validation calls here:
+    // validateDeadline(appointmentDate, requestTime);
+    // if (overlapsLunchBreak(startTime, endTime)) throw new Error("Appointments cannot be scheduled during lunch break");
+    // const isBusy = await busyDayDataModule.isDayBusy(appointmentDate);
+    // if (isBusy) throw new Error("This day is marked as busy");
+    // const isTimeSlotBusy = await busyTimeSlotDataModule.isTimeSlotBusy(appointmentDate, startTime, endTime);
+    // if (isTimeSlotBusy) throw new Error("This time slot is marked as busy");
+    // const conflictingAppointments = await appointmentDataModule.findConflictingAppointments(appointmentDate, startTime, endTime);
+    // if (conflictingAppointments.length > 0) throw new Error("Time slot conflict detected");
 
-    // Check if the time slot is marked as busy
-    const busyTimeSlotDataModule = require("../database/busy-time-slot-data");
-    const isTimeSlotBusy = await busyTimeSlotDataModule.isTimeSlotBusy(
-      appointmentDate,
-      startTime,
-      endTime
-    );
-    if (isTimeSlotBusy) {
-      throw new Error(
-        "This time slot is marked as busy. Appointments cannot be scheduled during this time."
-      );
-    }
-
-    // Check for conflicting appointments
-    const conflictingAppointments =
-      await appointmentDataModule.findConflictingAppointments(
-        appointmentDate,
-        startTime,
-        endTime
-      );
-
-    if (conflictingAppointments.length > 0) {
-      const conflict = conflictingAppointments[0];
-      const conflictStart = new Date(
-        conflict.appointmentStartTime
-      ).toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      const conflictEnd = new Date(
-        conflict.appointmentEndTime
-      ).toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      throw new Error(
-        `Time slot conflict: There is already an appointment scheduled from ${conflictStart} to ${conflictEnd} on this date. Please choose a different time.`
-      );
-    }
-
-    // Create appointment
+    // Create appointment in DB
     const newAppointment = await appointmentDataModule.createAppointment({
       userId: appointmentData.userId || null,
+      email: appointmentData.email || null,
       unitId: appointmentData.unitId,
       fullName: appointmentData.fullName.trim(),
       appointmentDate: appointmentDate,
@@ -230,11 +195,18 @@ async function createAppointment(appointmentData) {
       agenda: appointmentData.agenda || null,
     });
 
+    console.log("✅ Appointment created:", newAppointment);
+
     return newAppointment;
   } catch (error) {
+    console.error("❌ Error in createAppointment service:", error.message);
     throw new Error("Error creating appointment: " + error.message);
   }
 }
+
+
+
+
 
 /**
  * Update appointment with conflict checking and deadline validation
@@ -248,76 +220,85 @@ async function updateAppointment(id, appointmentData) {
       throw new Error("Appointment ID is required");
     }
 
-    // Check if appointment exists
-    const existingAppointment = await appointmentDataModule.findAppointmentById(
-      id
-    );
+    // Fetch existing appointment
+    const existingAppointment = await appointmentDataModule.findAppointmentById(id);
     if (!existingAppointment) {
       throw new Error("Appointment not found");
     }
 
-    // Use existing values if not provided
-    const appointmentDate = appointmentData.appointmentDate
-      ? new Date(appointmentData.appointmentDate)
-      : new Date(existingAppointment.appointmentDate);
+    console.log("📥 Received appointment data (service):", appointmentData);
+    console.log("📥 Existing appointment data:", existingAppointment);
+
+    // Use updated or existing start/end times
     const startTime = appointmentData.appointmentStartTime
       ? new Date(appointmentData.appointmentStartTime)
       : new Date(existingAppointment.appointmentStartTime);
     const endTime = appointmentData.appointmentEndTime
       ? new Date(appointmentData.appointmentEndTime)
       : new Date(existingAppointment.appointmentEndTime);
-    const requestTime = new Date(); // Current time when request is made
 
-    // Validate that start time is before end time
+    // Derive appointmentDate from startTime, forcing UTC midnight
+    const derivedAppointmentDate = new Date(Date.UTC(
+      startTime.getUTCFullYear(),
+      startTime.getUTCMonth(),
+      startTime.getUTCDate(),
+      0, 0, 0, 0
+    ));
+
+    const requestTime = new Date(); // Current request time
+
+    console.log("⏳ Parsed Dates:", {
+      appointmentDate: derivedAppointmentDate,
+      startTime,
+      endTime,
+      requestTime,
+    });
+
+    // Validate start < end
     if (startTime >= endTime) {
       throw new Error("Start time must be before end time");
     }
 
-    // Validate that start and end times are on the same date as appointment date
-    const appointmentDateOnly = new Date(appointmentDate);
-    appointmentDateOnly.setHours(0, 0, 0, 0);
-    const startDateOnly = new Date(startTime);
-    startDateOnly.setHours(0, 0, 0, 0);
-    const endDateOnly = new Date(endTime);
-    endDateOnly.setHours(0, 0, 0, 0);
+    // Validate start/end times are on the same date as appointmentDate (UTC)
+    const appointmentDateUTC = derivedAppointmentDate.getTime();
+    const startDateUTC = Date.UTC(startTime.getUTCFullYear(), startTime.getUTCMonth(), startTime.getUTCDate());
+    const endDateUTC = Date.UTC(endTime.getUTCFullYear(), endTime.getUTCMonth(), endTime.getUTCDate());
 
-    if (
-      startDateOnly.getTime() !== appointmentDateOnly.getTime() ||
-      endDateOnly.getTime() !== appointmentDateOnly.getTime()
-    ) {
-      throw new Error(
-        "Start time and end time must be on the same date as the appointment date"
-      );
+    console.log("📅 UTC Dates for Validation:", {
+      appointmentDateUTC,
+      startDateUTC,
+      endDateUTC,
+    });
+
+    if (startDateUTC !== appointmentDateUTC || endDateUTC !== appointmentDateUTC) {
+      throw new Error("Start time and end time must be on the same date as the appointment date");
     }
 
-    // Validate deadline (2:00 PM on weekdays) - only if date or time is being changed
+    // Validate deadline, lunch break, busy days, busy slots
     if (
       appointmentData.appointmentDate ||
       appointmentData.appointmentStartTime ||
       appointmentData.appointmentEndTime
     ) {
-      validateDeadline(appointmentDate, requestTime);
+      validateDeadline(derivedAppointmentDate, requestTime);
 
-      // Check if appointment overlaps with lunch break (12:00 PM - 1:00 PM)
       if (overlapsLunchBreak(startTime, endTime)) {
         throw new Error(
           "Appointments cannot be scheduled during lunch break (12:00 PM - 1:00 PM). Please choose a different time."
         );
       }
 
-      // Check if the day is marked as busy
       const busyDayDataModule = require("../database/busy-day-data");
-      const isBusy = await busyDayDataModule.isDayBusy(appointmentDate);
+      const isBusy = await busyDayDataModule.isDayBusy(derivedAppointmentDate);
       if (isBusy) {
         throw new Error(
           "This day is marked as busy. Appointments cannot be scheduled on this date."
         );
       }
 
-      // Check if the time slot is marked as busy
       const busyTimeSlotDataModule = require("../database/busy-time-slot-data");
       const isTimeSlotBusy = await busyTimeSlotDataModule.isTimeSlotBusy(
-        appointmentDate,
+        derivedAppointmentDate,
         startTime,
         endTime
       );
@@ -328,26 +309,21 @@ async function updateAppointment(id, appointmentData) {
       }
     }
 
-    // Check for conflicting appointments (excluding the current appointment)
-    const conflictingAppointments =
-      await appointmentDataModule.findConflictingAppointments(
-        appointmentDate,
-        startTime,
-        endTime,
-        id // Exclude current appointment from conflict check
-      );
+    // Check for conflicting appointments excluding current
+    const conflictingAppointments = await appointmentDataModule.findConflictingAppointments(
+      derivedAppointmentDate,
+      startTime,
+      endTime,
+      id // exclude this appointment
+    );
 
     if (conflictingAppointments.length > 0) {
       const conflict = conflictingAppointments[0];
-      const conflictStart = new Date(
-        conflict.appointmentStartTime
-      ).toLocaleTimeString("en-US", {
+      const conflictStart = new Date(conflict.appointmentStartTime).toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
       });
-      const conflictEnd = new Date(
-        conflict.appointmentEndTime
-      ).toLocaleTimeString("en-US", {
+      const conflictEnd = new Date(conflict.appointmentEndTime).toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
       });
@@ -356,41 +332,85 @@ async function updateAppointment(id, appointmentData) {
       );
     }
 
-    // Update appointment
-    const updatedAppointment = await appointmentDataModule.updateAppointment(
-      id,
-      {
-        appointmentDate: appointmentData.appointmentDate
-          ? appointmentDate
-          : existingAppointment.appointmentDate,
-        appointmentStartTime: appointmentData.appointmentStartTime
-          ? startTime
-          : existingAppointment.appointmentStartTime,
-        appointmentEndTime: appointmentData.appointmentEndTime
-          ? endTime
-          : existingAppointment.appointmentEndTime,
-        appointmentStatus: appointmentData.appointmentStatus,
-        unitId: appointmentData.unitId,
-        userId:
-          appointmentData.userId !== undefined
-            ? appointmentData.userId
-            : existingAppointment.userId,
-        fullName:
-          appointmentData.fullName !== undefined
-            ? appointmentData.fullName.trim() || null
-            : existingAppointment.fullName,
-        agenda:
-          appointmentData.agenda !== undefined
-            ? appointmentData.agenda || null
-            : existingAppointment.agenda,
+    // Update appointment in DB
+    const updatedAppointment = await appointmentDataModule.updateAppointment(id, {
+      appointmentDate: derivedAppointmentDate,
+      appointmentStartTime: appointmentData.appointmentStartTime ? startTime : existingAppointment.appointmentStartTime,
+      appointmentEndTime: appointmentData.appointmentEndTime ? endTime : existingAppointment.appointmentEndTime,
+      appointmentStatus: appointmentData.appointmentStatus,
+      unitId: appointmentData.unitId,
+      userId: appointmentData.userId !== undefined ? appointmentData.userId : existingAppointment.userId,
+      fullName: appointmentData.fullName !== undefined ? appointmentData.fullName.trim() || null : existingAppointment.fullName,
+      email: appointmentData.email !== undefined ? appointmentData.email || null : existingAppointment.email,
+      agenda: appointmentData.agenda !== undefined ? appointmentData.agenda || null : existingAppointment.agenda,
+    });
+
+    // === Email notifications ===
+    if (updatedAppointment.email) {
+      // Only send on status changes or reschedule
+      const previousStatus = existingAppointment.appointmentStatus;
+
+      // Approved
+      if (appointmentData.appointmentStatus === "approved" && previousStatus !== "approved") {
+        await sendEmail(
+          updatedAppointment.email,
+          "Appointment Approved",
+          `
+          <p>Good day ${updatedAppointment.fullName || ""},</p>
+          <p>Your appointment has been <strong>approved</strong>.</p>
+          <p>
+            <strong>Date:</strong> ${new Date(updatedAppointment.appointmentDate).toDateString()}<br/>
+            <strong>Time:</strong> ${new Date(updatedAppointment.appointmentStartTime).toLocaleTimeString()} - ${new Date(updatedAppointment.appointmentEndTime).toLocaleTimeString()}
+          </p>
+          <p>Thank you.</p>
+        `
+        );
       }
-    );
+
+      // Rejected
+      if (appointmentData.appointmentStatus === "rejected" && previousStatus !== "rejected") {
+        await sendEmail(
+          updatedAppointment.email,
+          "Appointment Rejected",
+          `
+          <p>Good day ${updatedAppointment.fullName || ""},</p>
+          <p>Your appointment has been <strong>rejected</strong>.</p>
+          <p>You may submit a new appointment request.</p>
+          <p>Thank you.</p>
+        `
+        );
+      }
+
+      // Rescheduled
+      const isRescheduled =
+        appointmentData.appointmentDate ||
+        appointmentData.appointmentStartTime ||
+        appointmentData.appointmentEndTime;
+
+      if (isRescheduled) {
+        await sendEmail(
+          updatedAppointment.email,
+          "Appointment Rescheduled",
+          `
+          <p>Good day ${updatedAppointment.fullName || ""},</p>
+          <p>Your appointment has been <strong>rescheduled</strong>.</p>
+          <p>
+            <strong>New Date:</strong> ${new Date(updatedAppointment.appointmentDate).toDateString()}<br/>
+            <strong>New Time:</strong> ${new Date(updatedAppointment.appointmentStartTime).toLocaleTimeString()} - ${new Date(updatedAppointment.appointmentEndTime).toLocaleTimeString()}
+          </p>
+          <p>Please take note of the updated schedule.</p>
+        `
+        );
+      }
+    }
 
     return updatedAppointment;
   } catch (error) {
+    console.error("❌ Error in updateAppointment service:", error.message);
     throw new Error("Error updating appointment: " + error.message);
   }
 }
+
 
 /**
  * Delete appointment (soft delete)
